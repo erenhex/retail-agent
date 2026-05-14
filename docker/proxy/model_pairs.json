@@ -1,0 +1,18 @@
+{
+  "_comment": "Allowed OpenRouter model IDs for /inference/* (proxy allowlist). No external fetch.",
+  "allowed_models": [
+    "deepseek/deepseek-v3.2",
+    "deepseek/deepseek-chat-v3.1",
+    "deepseek/deepseek-chat-v3-0324",
+    "deepseek/deepseek-r1-0528",
+    "tngtech/deepseek-r1t2-chimera",
+    "qwen/qwen3-32b",
+    "qwen/qwen3.5-397b-a17b",
+    "google/gemma-4-31b-it",
+    "z-ai/glm-5",
+    "z-ai/glm-5.1",
+    "moonshotai/kimi-k2.5",
+    "minimax/minimax-m2.5",
+    "xiaomi/mimo-v2-flash"
+  ]
+}

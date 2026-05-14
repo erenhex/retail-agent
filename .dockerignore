@@ -1,0 +1,68 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Logs
+logs/
+*.log
+server.log
+
+# Data files (evaluate image COPY data/); search-server image does not need data/
+!data/
+*.jsonl
+!resources/documents.jsonl
+!data/*.jsonl
+
+# Indexes (will be copied into image - must exist before build)
+# Note: Remove this line if you want to copy indexes into the image
+# indexes/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Environment files (will be passed via docker-compose)
+.env
+.env.local
+
+# Documentation
+*.md
+!docker/README.md
+README.md
+
+# Docker files themselves
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Temporary files
+*.tmp
+.tmp/
+*.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Other
+.cursor/
+plans/
+

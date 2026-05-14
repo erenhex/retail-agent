@@ -1,0 +1,100 @@
+services:
+  search-server:
+    image: erenhex/retailbench-search-server:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/search-server/Dockerfile
+    container_name: retailbench-search-server
+    environment:
+      - HOST=${HOST:-0.0.0.0}
+      - PORT=${PORT:-5632}
+      - WAITRESS_CONNECTION_LIMIT=${WAITRESS_CONNECTION_LIMIT:-1000}
+    ports:
+      - "${PORT:-5632}:${PORT:-5632}"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os; import urllib.request; urllib.request.urlopen('http://localhost:' + os.environ.get('PORT', '5632') + '/health').read()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - main
+    restart: unless-stopped
+
+  proxy:
+    image: erenhex/retailbench-proxy:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/proxy/Dockerfile
+    container_name: retailbench-proxy
+    environment:
+      - SEARCH_SERVER_URL=${SEARCH_SERVER_URL:-search-server}
+      - SEARCH_SERVER_PORT=${SEARCH_SERVER_PORT:-5632}
+      - OPENROUTER_HOST=${OPENROUTER_HOST:-openrouter.ai}
+    ports:
+      - "${PROXY_PORT:-8080}:80"
+    networks:
+      - main
+      - sandbox
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  sandbox:
+    image: retailbench-sandbox:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/sandbox/Dockerfile
+    environment:
+      - SANDBOX_PROXY_URL=http://proxy:80
+      - SANDBOX_PROBLEM_FILE=${SANDBOX_PROBLEM_FILE:-data/synthesize_product_test.jsonl}
+      - SANDBOX_MAX_WORKERS=${SANDBOX_MAX_WORKERS:-}
+      - SANDBOX_TIMEOUT=${SANDBOX_TIMEOUT:-300.0}
+      - SANDBOX_OUTPUT_FILE=${SANDBOX_OUTPUT_FILE:-}
+    volumes:
+      - ./data:/app/data:ro
+      - ./logs:/app/logs
+    networks:
+      - sandbox
+    profiles:
+      - tools
+    restart: "no"
+
+  test:
+    image: retailbench-evaluate:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/evaluate/Dockerfile
+    profiles:
+      - test
+    depends_on:
+      search-server:
+        condition: service_healthy
+      proxy:
+        condition: service_healthy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/workspace:ro
+      - ./logs:/app/logs
+    environment:
+      - HOST_PROJECT_DIR=${PWD}
+      - SANDBOX_IMAGE=${SANDBOX_IMAGE:-retailbench-sandbox:${IMAGE_TAG:-latest}}
+      - SANDBOX_NETWORK=sandbox-network
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+    entrypoint: [".venv/bin/python", "-m", "retailbench.test_runner"]
+    networks:
+      - main
+    restart: "no"
+
+networks:
+  main:
+    name: retailbench-main
+    driver: bridge
+  sandbox:
+    name: sandbox-network
+    driver: bridge
+    internal: true
