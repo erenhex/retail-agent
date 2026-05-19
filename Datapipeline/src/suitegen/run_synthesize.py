@@ -17,8 +17,14 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 os.chdir(_REPO_ROOT)
 load_repo_env(_REPO_ROOT)
 
-random.seed(42)
 _searcher = None
+
+
+def _configure_randomness(config: dict) -> None:
+    """Seed the stdlib RNG when ``seed`` is set; otherwise each run samples differently."""
+    if "seed" not in config or config["seed"] is None:
+        return
+    random.seed(int(config["seed"]))
 
 
 def _get_searcher():
@@ -525,6 +531,8 @@ if __name__ == "__main__":
     config_file = sys.argv[1]
     with open(config_file, "r") as fin:
         config = json.load(fin)
+
+    _configure_randomness(config)
 
     task_mapping = {
         "product": synthesize_product,

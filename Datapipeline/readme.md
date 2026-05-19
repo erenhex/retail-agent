@@ -28,7 +28,7 @@ pip install -e ".[datapipeline]"
   ./build_index.sh
   ```
 
-- **Synthesized suites** (writes under `data/suites/`). Loads **`retail-bench/.env`** automatically (`OPENAI_API_KEY`, `OPENAI_BASE_URL`; falls back `OPENROUTER_API_KEY` → `OPENAI_API_KEY`):
+- **Synthesized suites** (writes under `data/suites/`). Loads **`retail-bench/.env`** automatically (`OPENAI_API_KEY`, `OPENAI_BASE_URL`; falls back `OPENROUTER_API_KEY` → `OPENAI_API_KEY`). **Randomness**: omit `"seed"` in the JSON config (default) for different product/requirement samples each run; set `"seed": 42` only when you need a reproducible suite. LLM wording also varies via `model_config.temperature`.
 
   ```bash
   # One task per run
