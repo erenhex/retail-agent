@@ -9,7 +9,7 @@ description = "RetailBench local agent harness, scoring, and search tooling."
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
-datapipeline = ["pyserini", "ujson", "tqdm", "openai"]
+datapipeline = ["transformers", "pyserini", "ujson", "tqdm", "openai", "python-dotenv"]
 
 [tool.setuptools.packages.find]
 where = ["."]

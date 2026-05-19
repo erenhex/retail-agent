@@ -1,0 +1,17 @@
+{
+    "task": "combined",
+    "synthesize_prompt_file": "Datapipeline/src/suitegen/prompt/synthesize.md",
+    "documents_file": "resources/documents.jsonl",
+    "synthesize_file": "data/suites/synthesize_combined.jsonl",
+    "model_config": {
+        "model": "openai/gpt-4.1-mini",
+        "temperature": 0.2,
+        "top_p": 0.2,
+        "max_tokens": 8192
+    },
+    "tasks": [
+        {"task": "product", "total": 10},
+        {"task": "shop", "total": 10},
+        {"task": "voucher", "total": 10}
+    ]
+}

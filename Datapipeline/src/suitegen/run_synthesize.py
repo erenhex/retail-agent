@@ -9,15 +9,25 @@ import ujson as json
 from collections import defaultdict
 
 from tqdm import tqdm
-from pyserini.search.lucene import LuceneSearcher
 
+from .util.env import load_repo_env
 from .util.llm import ask_llm
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 os.chdir(_REPO_ROOT)
+load_repo_env(_REPO_ROOT)
 
 random.seed(42)
-searcher = LuceneSearcher("indexes")
+_searcher = None
+
+
+def _get_searcher():
+    global _searcher
+    if _searcher is None:
+        from pyserini.search.lucene import LuceneSearcher
+
+        _searcher = LuceneSearcher("indexes")
+    return _searcher
 
 
 def load_sid2pids(config: dict) -> dict:
@@ -63,9 +73,9 @@ def sample_products_in_shop(shop2products: dict, N: int) -> tuple:
             continue
 
         products = [
-            json.loads(searcher.doc(x).raw())["product"]
+            json.loads(_get_searcher().doc(x).raw())["product"]
             for x in selected_product_ids
-            if searcher.doc(x)
+            if _get_searcher().doc(x)
         ]
         if len(products) != N:
             continue
@@ -220,7 +230,14 @@ def generate_target_product(
     return reward, requirement
 
 
-def generate_query_and_write(prompt, reward, fout, external="", voucher=None) -> bool:
+def generate_query_and_write(
+    prompt,
+    reward,
+    fout,
+    config: dict,
+    external="",
+    voucher=None,
+) -> bool:
     reasoning_content, content = ask_llm(
         messages=[{"role": "user", "content": prompt}],
         model_config=config["model_config"],
@@ -248,7 +265,7 @@ def generate_query_and_write(prompt, reward, fout, external="", voucher=None) ->
     return True
 
 
-def synthesize_product(config: dict):
+def synthesize_product(config: dict, fout=None):
     with open(config["synthesize_prompt_file"], "r") as fin:
         prompt_template = fin.read().strip()
 
@@ -258,13 +275,16 @@ def synthesize_product(config: dict):
     count = 0
     used = set()
     pbar = tqdm(total=total, desc="Generate product intention queries: ")
-    with open(config["synthesize_file"], "w") as fout:
+    close_fout = fout is None
+    if fout is None:
+        fout = open(config["synthesize_file"], "w")
+    try:
         while count < total:
             product_id = random.choice(pids)
             if product_id in used:
                 continue
 
-            doc = searcher.doc(product_id)
+            doc = _get_searcher().doc(product_id)
             if not doc:
                 continue
             jsonobj = json.loads(doc.raw())
@@ -278,15 +298,19 @@ def synthesize_product(config: dict):
                 .replace("<|task|>", "a product") \
                 .replace("<|requirements|>", "\n".join(requirement))
 
-            if not generate_query_and_write(prompt, reward, fout):
+            if not generate_query_and_write(prompt, reward, fout, config):
                 continue
 
             count += 1
             used.add(product_id)
             pbar.update(1)
+    finally:
+        pbar.close()
+        if close_fout:
+            fout.close()
 
 
-def synthesize_shop(config: dict):
+def synthesize_shop(config: dict, fout=None):
     with open(config["synthesize_prompt_file"], "r") as fin:
         prompt_template = fin.read().strip()
 
@@ -299,7 +323,10 @@ def synthesize_shop(config: dict):
         total=total,
         desc="Generate shop intention queries: ",
     )
-    with open(config["synthesize_file"], "w") as fout:
+    close_fout = fout is None
+    if fout is None:
+        fout = open(config["synthesize_file"], "w")
+    try:
         while count < total:
             N = random.randint(2, 4)
             shop_id, selected_product_ids, products = sample_products_in_shop(sid2pids, N)
@@ -323,15 +350,19 @@ def synthesize_shop(config: dict):
                 .replace("<|task|>", "a shop that sells multiple products") \
                 .replace("<|requirements|>", "\n\n".join(requirement_str_list))
 
-            if not generate_query_and_write(prompt, reward_list, fout):
+            if not generate_query_and_write(prompt, reward_list, fout, config):
                 continue
 
             count += 1
             used.update(selected_product_ids)
             pbar.update(1)
+    finally:
+        pbar.close()
+        if close_fout:
+            fout.close()
 
 
-def synthesize_voucher(config: dict):
+def synthesize_voucher(config: dict, fout=None):
     with open(config["synthesize_prompt_file"], "r") as fin:
         prompt_template = fin.read().strip()
 
@@ -342,7 +373,10 @@ def synthesize_voucher(config: dict):
     count = 0
     used = set()
     pbar = tqdm(total=total, desc="Generate voucher intention queries: ")
-    with open(config["synthesize_file"], "w") as fout:
+    close_fout = fout is None
+    if fout is None:
+        fout = open(config["synthesize_file"], "w")
+    try:
         while count < total:
             voucher_type = random.choice(["platform", "shop"])
 
@@ -352,9 +386,9 @@ def synthesize_voucher(config: dict):
                 N = random.randint(1, 4)
                 selected_product_ids = random.sample(pids, N)
                 products = [
-                    json.loads(searcher.doc(x).raw())["product"]
+                    json.loads(_get_searcher().doc(x).raw())["product"]
                     for x in selected_product_ids
-                    if searcher.doc(x)
+                    if _get_searcher().doc(x)
                 ]
                 if len(products) != N:
                     continue
@@ -439,12 +473,52 @@ def synthesize_voucher(config: dict):
                 .replace("<|requirements|>", "\n\n".join(requirement_str_list))
 
             external = f"My budget is only `{budget}`, but I have a voucher with the following rules:\n{voucher_description}"
-            if not generate_query_and_write(prompt, reward_list, fout, external=external, voucher=voucher):
+            if not generate_query_and_write(
+                prompt, reward_list, fout, config, external=external, voucher=voucher
+            ):
                 continue
 
             count += 1
             used.update(selected_product_ids)
             pbar.update(1)
+    finally:
+        pbar.close()
+        if close_fout:
+            fout.close()
+
+
+def _subtask_config(config: dict, sub: dict) -> dict:
+    merged = {k: v for k, v in config.items() if k not in ("tasks", "sources")}
+    merged.update(sub)
+    return merged
+
+
+def synthesize_combined(config: dict):
+    synthesizers = {
+        "product": synthesize_product,
+        "shop": synthesize_shop,
+        "voucher": synthesize_voucher,
+    }
+    with open(config["synthesize_file"], "w") as fout:
+        for sub in config["tasks"]:
+            sub_config = _subtask_config(config, sub)
+            synthesizers[sub_config["task"]](sub_config, fout=fout)
+
+
+def merge_synthesize_files(config: dict):
+    sources = config["sources"]
+    missing = [p for p in sources if not Path(p).is_file()]
+    if missing:
+        raise FileNotFoundError(
+            "Missing source suite file(s): " + ", ".join(missing)
+        )
+    with open(config["synthesize_file"], "w") as fout:
+        for path in sources:
+            with open(path, "r") as fin:
+                for line in fin:
+                    line = line.strip()
+                    if line:
+                        fout.write(f"{line}\n")
 
 
 if __name__ == "__main__":
@@ -456,6 +530,11 @@ if __name__ == "__main__":
         "product": synthesize_product,
         "shop": synthesize_shop,
         "voucher": synthesize_voucher,
+        "combined": synthesize_combined,
+        "merge": merge_synthesize_files,
     }
-    task_mapping[config["task"]](config)
+    task = config["task"]
+    if task not in task_mapping:
+        raise ValueError(f"Unknown task: {task!r}. Expected one of {sorted(task_mapping)}.")
+    task_mapping[task](config)
 

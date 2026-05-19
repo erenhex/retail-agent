@@ -1,0 +1,9 @@
+{
+    "task": "merge",
+    "synthesize_file": "data/suites/synthesize_combined.jsonl",
+    "sources": [
+        "data/suites/synthesize_product.jsonl",
+        "data/suites/synthesize_shop.jsonl",
+        "data/suites/synthesize_voucher.jsonl"
+    ]
+}
