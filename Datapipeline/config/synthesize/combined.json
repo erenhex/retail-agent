@@ -9,7 +9,6 @@
         "top_p": 0.2,
         "max_tokens": 8192
     },
-    "seed": 42,
     "tasks": [
         {"task": "product", "total": 10},
         {"task": "shop", "total": 10},

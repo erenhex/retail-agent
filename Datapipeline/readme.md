@@ -41,4 +41,9 @@ pip install -e ".[datapipeline]"
 
   # Concatenate existing per-task JSONL files (no LLM)
   python -m Datapipeline.src.suitegen.run_synthesize Datapipeline/config/synthesize/merge.json
+
+  # Batch: 20 combined suites (30 queries each) with seeds 1–20 → combined_30_1.jsonl … combined_30_20.jsonl
+  python -m Datapipeline.src.suitegen.run_synthesize_batch Datapipeline/config/synthesize/batch_30.json
   ```
+
+  Synthesized records include **`category`** (`Product`, `Shop`, `Voucher`) for correct scoring in the test runner.

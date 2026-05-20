@@ -1,0 +1,7 @@
+{
+    "base_config": "Datapipeline/config/synthesize/combined.json",
+    "count": 20,
+    "seed_start": 1,
+    "output_dir": "data/suites",
+    "output_template": "combined_30_{i}.jsonl"
+}

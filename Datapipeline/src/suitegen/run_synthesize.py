@@ -241,6 +241,7 @@ def generate_query_and_write(
     reward,
     fout,
     config: dict,
+    category: str,
     external="",
     voucher=None,
 ) -> bool:
@@ -262,7 +263,12 @@ def generate_query_and_write(
     if external:
         query = f"{query}\n\n{external}"
 
-    data = {"prompt": prompt, "query": query, "reward": reward}
+    data = {
+        "prompt": prompt,
+        "query": query,
+        "reward": reward,
+        "category": category,
+    }
     if voucher:
         data["voucher"] = voucher
     jsonstr = json.dumps(data)
@@ -304,7 +310,7 @@ def synthesize_product(config: dict, fout=None):
                 .replace("<|task|>", "a product") \
                 .replace("<|requirements|>", "\n".join(requirement))
 
-            if not generate_query_and_write(prompt, reward, fout, config):
+            if not generate_query_and_write(prompt, reward, fout, config, "Product"):
                 continue
 
             count += 1
@@ -356,7 +362,7 @@ def synthesize_shop(config: dict, fout=None):
                 .replace("<|task|>", "a shop that sells multiple products") \
                 .replace("<|requirements|>", "\n\n".join(requirement_str_list))
 
-            if not generate_query_and_write(prompt, reward_list, fout, config):
+            if not generate_query_and_write(prompt, reward_list, fout, config, "Shop"):
                 continue
 
             count += 1
@@ -480,7 +486,13 @@ def synthesize_voucher(config: dict, fout=None):
 
             external = f"My budget is only `{budget}`, but I have a voucher with the following rules:\n{voucher_description}"
             if not generate_query_and_write(
-                prompt, reward_list, fout, config, external=external, voucher=voucher
+                prompt,
+                reward_list,
+                fout,
+                config,
+                "Voucher",
+                external=external,
+                voucher=voucher,
             ):
                 continue
 

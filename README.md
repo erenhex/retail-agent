@@ -29,6 +29,20 @@ If `search-server` and `proxy` are already up from another clone on the same Doc
 - `--skip-reasoning` — skip the extra LLM judge pass on trajectories
 - `--max-workers`, `--timeout` — passed through to the sandbox
 
+### Batch evaluation (multiple suites)
+
+```bash
+docker compose --profile test run --no-deps \
+  --entrypoint .venv/bin/python \
+  test -m retailbench.batch_test_runner \
+  --agent-file src/agent/agent_test.py \
+  --suite-glob 'data/suites/combined_30_*.jsonl' \
+  --results-file logs/batch_results.json \
+  --seed-start 1
+```
+
+Writes `logs/batch_results.json` with per-suite scores and mean/min/max. Host: `python -m retailbench.batch_test_runner` with the same flags (requires search-server, proxy, and sandbox image).
+
 ## Services
 
 | Service        | Role |
