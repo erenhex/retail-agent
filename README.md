@@ -18,7 +18,15 @@ mkdir -p logs
 docker compose up -d search-server proxy
 docker compose build sandbox
 docker compose --profile test build test
+
+sudo chown -R 1000:1000 .../retail-bench/logs
 docker compose --profile test run --no-deps test --agent-file src/agent/agent_test.py
+
+docker compose --profile test run --no-deps test \
+  --agent-file src/agent/agent_test.py \
+  --problem-file data/suites/all_combined.jsonl \
+  --max-workers 15 \
+  --skip-reasoning
 ```
 
 If `search-server` and `proxy` are already up from another clone on the same Docker networks (`retailbench-main`, `sandbox-network`), you can use `--no-deps` on `run test` so Compose does not recreate those services.
@@ -32,6 +40,7 @@ If `search-server` and `proxy` are already up from another clone on the same Doc
 ### Batch evaluation (multiple suites)
 
 ```bash
+sudo chown -R 1000:1000 .../retail-bench/logs
 docker compose --profile test run --no-deps \
   --entrypoint .venv/bin/python \
   test -m retailbench.batch_test_runner \
